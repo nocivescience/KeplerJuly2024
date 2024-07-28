@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/p5.min.js"
+        integrity="sha512-0zGLOFv/+OQ6YfVCSGDQWhrDRx0ONmBqWvs3gI4olm8i6xtKoG1FhEnB4eTaWCVnojyfUDgE8Izeln+mAJAkFA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        let GBODIES = [];
+        let TIME = 0;
+        const dT = 0.01;
+        const G = 0.9;
+        const maxSteps = 40;
+        const maxIter = 10;
+
+        let focus = { pos: { x: 0, y: 0 } };
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+
+            center = createVector(width / 2, height / 2);
+
+            GBODIES.push(new GravityBody(25, 1e8));
+            GBODIES.push(new GravityBody(3, 1000));
+
+            GBODIES[0].setVel(0, 0);
+
+            GBODIES[1].setPos(280, 0);
+            GBODIES[1].setVel(0, 550);
+        }
+
+        function draw() {
+            TIME += dT;
+            background(10);
+
+            push();
+            translate(center.x - focus.pos.x, center.y - focus.pos.y);
+
+            for (let i = 0, l = GBODIES.length; i < l; i++) {
+                let A = GBODIES[i];
+
+                let parentI = 0;
+                let maxAcc = createVector(0, 0);
+                for (let j = 0; j < l; j++) {
+                    if (i == j) { continue; }
+                    let B = GBODIES[j];
+
+                    let gravAcc = getAccelerationFromTo(A, B);
+                    A.acc.add(gravAcc);
+
+                    if (gravAcc.mag() > maxAcc.mag() && B.mass > A.mass) {
+                        maxAcc.x = gravAcc.x;
+                        maxAcc.y = gravAcc.y;
+                        parentI = j;
+                    }
+
+                }
+
+                A.update();
+                A.show();
+
+
+                if (i != parentI) {
+                    let parent = GBODIES[parentI];
+                    A.setParent(parent);
+
+                    drawPathEllipse(parent, getOrbitPredictionForTo(A, parent));
+                }
+            }
+
+            if (recording) {
+                let parent = GBODIES[0];
+                endX = mouseX + focus.pos.x - center.x;
+                endY = mouseY + focus.pos.y - center.y;
+                velX = (endX - startX) * 0.8;
+                velY = (endY - startY) * 0.8;
+
+                let path = getOrbitPredictionForTo(
+                    {
+                        mass: startM,
+                        pos: createVector(startX, startY),
+                        vel: createVector(velX, velY)
+                    },
+                    parent
+                );
+
+                if (keyCode === UP_ARROW) {
+                    startM += 2;
+                } else if (keyCode === DOWN_ARROW) {
+                    startM = max(startM - 2, 0);
+                }
+
+                push();
+                noStroke();
+                fill(255, 100);
+                circle(startX, startY, log(startM));
+
+                stroke(200, 240, 80);
+                line(startX, startY, startX + velX, startY + velY);
+                drawPathEllipse(parent, path);
+                pop();
+            }
+
+            pop();
+        }
+
+
+        let recording = false;
+        let startM = 20;
+        let startX = 0, startY = 0;
+        let endX = 0, endY = 0;
+        let velX = 0, velY = 0;
+        function mousePressed() {
+            recording = true;
+            startX = mouseX + focus.pos.x - center.x;
+            startY = mouseY + focus.pos.y - center.y;
+            startM = 20;
+        }
+        function mouseReleased() {
+            startM = prompt("Mass:", startM);
+
+            let newGB = new GravityBody(log(startM), startM);
+            GBODIES.push(newGB);
+
+            newGB.setPos(startX, startY);
+            newGB.setVel(velX, velY);
+
+            recording = false;
+        }
+
+
+
+        class GravityBody {
+            constructor(r, m) {
+                this.pos = createVector(0, 0);
+                this.vel = createVector(0, 0);
+                this.acc = createVector(0, 0);
+
+                this.size = r;
+                this.mass = m;
+
+                this.parent = null;
+                this.soi = 0;
+            }
+
+            setPos(x, y) {
+                this.pos.x = x;
+                this.pos.y = y;
+            }
+            setVel(x, y) {
+                this.vel.x = x;
+                this.vel.y = y;
+            }
+            setParent(target) {
+                let pos = getRelativePosTo(this, target);
+                let vel = getRelativeVelTo(this, target);
+                let _pos_ = pos.mag();
+                let _vel_ = vel.mag();
+                // std gravitation parameter
+                let u = this.mass + target.mass;
+                // semimajor axis
+                let a = -(u * _pos_) / (_pos_ * _vel_ * _vel_ - (u + u));
+                this.soi = a * pow(this.mass / target.mass, 0.4);
+            }
+
+            update() {
+                this.vel.add(p5.Vector.mult(this.acc, dT));
+                this.pos.add(p5.Vector.mult(this.vel, dT));
+
+                this.acc.x = 0;
+                this.acc.y = 0;
+            }
+
+            show() {
+                push();
+                translate(this.pos.x, this.pos.y);
+                noStroke();
+
+                fill(255, 100);
+                circle(0, 0, 2 * this.soi);
+
+                fill(255);
+                circle(0, 0, 2 * this.size);
+
+                fill(80, 240, 150);
+                textSize(8);
+                text(`${this.mass}`, this.size, this.size);
+                pop();
+            }
+        }
+
+
+        function getAccelerationFromTo(gb1, gb2) {
+            let disp = p5.Vector.sub(gb2.pos, gb1.pos);
+            let dist = disp.mag();
+            return disp.normalize().mult(G * gb2.mass / (dist * dist));
+        }
+
+
+        function getOrbitPredictionForTo(gb1, gb2) {
+            let pos = getRelativePosTo(gb1, gb2);
+            let vel = getRelativeVelTo(gb1, gb2);
+            let _pos_ = pos.mag();
+            let _vel_ = vel.mag();
+
+            // std gravitation parameter
+            let u = G * (gb2.mass);
+            // semimajor axis
+            let a = -(u * _pos_) / (_pos_ * _vel_ * _vel_ - (u + u));
+            // orbital period
+            let T = TWO_PI * sqrt((a * a * a) / u);
+            // frequency
+            let w = TWO_PI / T;
+            // angular momentum
+            let angP = pos.x * vel.y - pos.y * vel.x;
+            // orbital energy
+            let E = (_vel_ * _vel_ / 2) - (u / _pos_);
+            // eccentricity
+            let e = sqrt(1 + (2 * E * angP * angP) / (u * u));
+            // eccentricity vector
+            let eV = p5.Vector.sub(
+                p5.Vector.mult(pos, (((_vel_ * _vel_) / u) - (1 / _pos_))),
+                p5.Vector.mult(vel, (p5.Vector.dot(pos, vel) / u))
+            );
+            // orientation of periapsis
+            let o = atan2(eV.y, eV.x);
+
+            // semiminor axis
+            let b = a * sqrt(1 - e * e);
+
+            return { sM: a, sm: b, ecc: e, orient: o };
+
+            let path = [];
+
+            for (let i = 0; i < maxSteps; i++) {
+                // current eccentric and mean anomaly
+                let ma = w * (T * (i / maxSteps));
+                let ea = ma;
+                let iter = 0;
+                while (iter < maxIter) {
+                    iter++;
+                    //Keplers equation
+                    var dx = ea - e * sin(ea) - ma;
+                    //Derivative of Keplers equation
+                    var dy = 1 - e * cos(ea);
+                    var dt = dx / dy;
+                    ea -= dt;
+                    if (abs(dt) < 1e-8) break;
+                }
+
+                let x = a * (cos(ea) - e)
+                let y = a * sin(ea) * sqrt(1 - (e * e));
+                path.push({
+                    x: x * cos(o) - y * sin(o),
+                    y: x * sin(o) + y * cos(o)
+                });
+            }
+
+            return path;
+        }
+
+        function getRelativePosTo(from, to) {
+            return p5.Vector.sub(from.pos, to.pos);
+        }
+        function getRelativeVelTo(from, to) {
+            return p5.Vector.sub(from.vel, to.vel);
+        }
+
+
+        /*
+        function drawPathVerts (parent, path) {
+          push();
+          translate(parent.pos.x,parent.pos.y);
+          noFill();
+          stroke(255, 100); strokeWeight(0.8);
+          beginShape();
+          for (let p of path) {
+            vertex(p.x, p.y);
+          }
+          endShape(CLOSE);
+          pop();
+        }
+        */
+
+        function drawPathEllipse(parent, path) {
+            push();
+            translate(parent.pos.x, parent.pos.y);
+            noFill();
+            stroke(255, 100); strokeWeight(0.8);
+            rotate(path.orient);
+            ellipse(-path.sM * path.ecc, 0, 2 * path.sM, 2 * path.sm);
+            pop();
+        }
+
+        //
+    </script>
+</body>
+
+</html>
