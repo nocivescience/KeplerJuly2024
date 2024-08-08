@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+    }
+    canvas{
+        border: 1px solid black;
+        border-radius: 10px;
+        box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
+    }
+</style>
+
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/p5.min.js"
+        integrity="sha512-0zGLOFv/+OQ6YfVCSGDQWhrDRx0ONmBqWvs3gI4olm8i6xtKoG1FhEnB4eTaWCVnojyfUDgE8Izeln+mAJAkFA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+        <script>
+            let GBODIES = [];
+            let TIME = 0;
+            const dT = 0.01;
+            const G = 0.9;
+            const maxSteps = 40;
+            const maxIter = 10;
+
+            let focus = { pos: { x: 0, y: 0 } };
+
+            function setup() {
+                createCanvas(windowWidth/2, windowHeight/2);
+                center = createVector(width / 2, height / 2);
+                GBODIES.push(new GravityBody(25, 1e8));
+                GBODIES.push(new GravityBody(3, 1000));
+                GBODIES.push(new GravityBody(3, 1000));
+            }
+            function draw() {
+                TIME += dT;
+                background(10);
+                push();
+                for (let i = 0, l = 3; i < l; i++) {
+                    let A = GBODIES[i];
+                    let parentI = 0;
+                    let maxAcc = createVector(0, i);
+                    for (let j = 0; j < l; j++) {
+                        if (i == j) { continue; }
+                        let B = GBODIES[j];
+                        let gravAcc = getAccelerationFromTo(A, B);
+                        A.acc.add(gravAcc);
+                        if (gravAcc.mag() > maxAcc.mag() && B.mass > A.mass) {
+                            maxAcc.x = gravAcc.x;
+                            maxAcc.y = gravAcc.y;
+                            parentI = j;
+                        }
+                        A.updade();
+                        A.show();
+                    }
+                }
+            }
+            function getAccelerationFromTo(gb1, gb2) {
+                let disp = p5.Vector.sub(gb2.pos, gb1.pos);
+                let dist = disp.mag();
+                return disp
+            }
+            class GravityBody {
+                constructor(r, m) {
+                    this.pos = createVector(0, 0);
+                    this.vel = createVector(0, 0);
+                    this.acc = createVector(0, 0);
+                    this.r = r;
+                    this.mass = m;
+                }
+                update() {
+                    this.vel.add(p5.Vector.mult(this.acc, dT));
+                    this.pos.add(p5.Vector.mult(this.vel, dT));
+                    this.acc.mult(0);
+                }
+            }
+        </script>
+</body>
+</html>

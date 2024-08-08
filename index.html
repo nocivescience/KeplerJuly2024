@@ -158,15 +158,15 @@
                 this.vel.y = y;
             }
             setParent(target) {
-                let pos = getRelativePosTo(this, target);
-                let vel = getRelativeVelTo(this, target);
-                let _pos_ = pos.mag();
-                let _vel_ = vel.mag();
+                let pos = getRelativePosTo(this, target); // position
+                let vel = getRelativeVelTo(this, target); // velocity
+                let _pos_ = pos.mag(); // distance
+                let _vel_ = vel.mag(); // speed
                 // std gravitation parameter
                 let u = this.mass + target.mass;
                 // semimajor axis
-                let a = -(u * _pos_) / (_pos_ * _vel_ * _vel_ - (u + u));
-                this.soi = a * pow(this.mass / target.mass, 0.4);
+                let a = -(u * _pos_) / (_pos_ * _vel_ * _vel_ - (u + u)); // semimajor axis
+                this.soi = a * pow(this.mass / target.mass, 0.4); // sphere of influence
             }
 
             update() {

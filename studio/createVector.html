@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>p5.js Example</title>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/p5.min.js"
+        integrity="sha512-0zGLOFv/+OQ6YfVCSGDQWhrDRx0ONmBqWvs3gI4olm8i6xtKoG1FhEnB4eTaWCVnojyfUDgE8Izeln+mAJAkFA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer">
+    </script>
+    <script>
+        let vector;
+        let TIME = 0;
+        let dT = 0.01;
+        let colorCircle = 'red';
+        circles = [];
+        function setup() {
+            createCanvas(400, 400);
+            vector = createVector(100, 200);
+        }
+
+        function draw() {
+            TIME += dT;
+            if (TIME > 10) {
+                TIME = 0;
+                colorCircle = colorCircle === 'red' ? 'blue' : 'red';
+            }
+            for (let i = 0; i < 10; i++) {
+                vector.add(1, 1);
+                circle=circulo(vector.x, vector.y, 10);
+                circles.push(circle);
+            }
+        }
+        function circulo(x, y, r) {
+            clear();
+            fill(colorCircle);
+            ellipse(x, y+TIME*20, r, r);
+        }
+    </script>
+</body>
+</html>
