@@ -15,10 +15,11 @@
         let TIME = 0;
         let dT = 0.01;
         let colorCircle = 'red';
-        circles = [];
         function setup() {
             createCanvas(400, 400);
             vector = createVector(100, 200);
+
+            console.log(vector);
         }
 
         function draw() {
@@ -27,11 +28,8 @@
                 TIME = 0;
                 colorCircle = colorCircle === 'red' ? 'blue' : 'red';
             }
-            for (let i = 0; i < 10; i++) {
-                vector.add(1, 1);
-                circle=circulo(vector.x, vector.y, 10);
-                circles.push(circle);
-            }
+            console.log(TIME);
+            circulo(vector.x, vector.y, 100);
         }
         function circulo(x, y, r) {
             clear();
